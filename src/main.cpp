@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <ThingSpeak.h>
 #include <Arduino.h>
+#include <FS.h>
+#include <SPIFFS.h>
 
 // Define GPIO pins for sensors
 const int sensor1Pin = 25;  // Sensor 1 for "IN"

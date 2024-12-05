@@ -44,5 +44,15 @@
     <button onclick="saveData()">Save Data</button>
   </div>
   <script src="script.js"></script>
+  <script>
+    // Check if the user is logged in by verifying SSID and password
+    const ssid = localStorage.getItem('ssid');
+    const password = localStorage.getItem('password');
+
+    if (!ssid || !password) {
+      // Redirect to login page if no SSID or password is found
+      window.location.href = 'login.html';
+    }
+  </script>
 </body>
 </html>
