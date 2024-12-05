@@ -24,6 +24,9 @@ int currentInRoom = 0;         // Current number in room
 unsigned long sensor1Cooldown = 0;
 unsigned long sensor2Cooldown = 0;
 
+// Flag to track whether finalCount has already been updated
+bool finalCountUpdated = false;
+
 void setup() {
   pinMode(sensor1Pin, INPUT);
   pinMode(sensor2Pin, INPUT);
@@ -67,13 +70,20 @@ void loop() {
   }
   lastSensor2Value = sensor2Value;
 
+  // Calculate the current number of people in the room
   currentInRoom = counterIn - counterOut;
-  if (counterIn == counterOut) {
-    finalCount = counterIn;
+
+  // Update finalCount only when counterIn equals counterOut
+  if (counterIn == counterOut && !finalCountUpdated) {
+    finalCount = counterIn; // Update finalCount only once when counters match
+    finalCountUpdated = true; // Prevent further updates until new mismatch occurs
+  } else if (counterIn != counterOut) {
+    finalCountUpdated = false; // Reset flag when counters are mismatched
   }
 
   if (currentMillis - lastUpdate >= 21000) {
     lastUpdate = currentMillis;
+
     ThingSpeak.setField(1, counterIn);
     ThingSpeak.setField(2, counterOut);
     ThingSpeak.setField(3, finalCount);
@@ -86,5 +96,6 @@ void loop() {
       Serial.println("Failed to send data to ThingSpeak");
     }
   }
+
   delay(100);
 }
