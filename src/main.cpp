@@ -42,49 +42,62 @@ void setup() {
 
   // Fetch current values from ThingSpeak via HTTP
   String url = "http://api.thingspeak.com/channels/" + String(channelID) + "/feeds.json?api_key=" + String(readAPIKey) + "&results=1";
-  
+  Serial.println("Fetching current data from ThingSpeak...");
+
   if (client.connect("api.thingspeak.com", 80)) {  // Use port 80 for HTTP
     client.println("GET " + url + " HTTP/1.1");
     client.println("Host: api.thingspeak.com");
     client.println("Connection: close");
     client.println();
-    
+
+    // Wait for the response from ThingSpeak
+    String response = "";
     while (client.connected()) {
       String line = client.readStringUntil('\n');
-      if (line.indexOf("feeds") >= 0) {
-        int startIdx = line.indexOf("[{") + 2;
-        int endIdx = line.indexOf("}]");
-        String data = line.substring(startIdx, endIdx);
-        
-        // Extract values from the JSON response
-        int field1Start = data.indexOf("\"field1\":\"") + 9;
-        int field1End = data.indexOf("\"", field1Start);
-        String field1Value = data.substring(field1Start, field1End);
-        counterIn = field1Value.toInt();  // Set counterIn to the current value in ThingSpeak
-        Serial.print("Current counterIn value: ");
-        Serial.println(counterIn);
-
-        int field2Start = data.indexOf("\"field2\":\"") + 9;
-        int field2End = data.indexOf("\"", field2Start);
-        String field2Value = data.substring(field2Start, field2End);
-        counterOut = field2Value.toInt();  // Set counterOut to the current value in ThingSpeak
-        Serial.print("Current counterOut value: ");
-        Serial.println(counterOut);
-
-        int field3Start = data.indexOf("\"field3\":\"") + 9;
-        int field3End = data.indexOf("\"", field3Start);
-        String field3Value = data.substring(field3Start, field3End);
-        finalCount = field3Value.toInt();  // Set finalCount to the current value in ThingSpeak
-        Serial.print("Current finalCount value: ");
-        Serial.println(finalCount);
-
-        int field4Start = data.indexOf("\"field4\":\"") + 9;
-        int field4End = data.indexOf("\"", field4Start);
-        String field4Value = data.substring(field4Start, field4End);
-        currentInRoom = field4Value.toInt();  // Set currentInRoom to the current value in ThingSpeak
-        Serial.print("Current currentInRoom value: ");
-        Serial.println(currentInRoom);
+      response += line;
+      // Debug the response
+      Serial.println(line);
+      if (line == "\r") {
+        break;  // End of HTTP headers
       }
+    }
+
+    // Read the JSON content
+    if (response.indexOf("feeds") >= 0) {
+      int startIdx = response.indexOf("[{") + 2;
+      int endIdx = response.indexOf("}]");
+      String data = response.substring(startIdx, endIdx);
+
+      // Extract values from the JSON response
+      int field1Start = data.indexOf("\"field1\":\"") + 9;
+      int field1End = data.indexOf("\"", field1Start);
+      String field1Value = data.substring(field1Start, field1End);
+      counterIn = field1Value.toInt();  // Set counterIn to the current value in ThingSpeak
+      Serial.print("Current counterIn value: ");
+      Serial.println(counterIn);
+
+      int field2Start = data.indexOf("\"field2\":\"") + 9;
+      int field2End = data.indexOf("\"", field2Start);
+      String field2Value = data.substring(field2Start, field2End);
+      counterOut = field2Value.toInt();  // Set counterOut to the current value in ThingSpeak
+      Serial.print("Current counterOut value: ");
+      Serial.println(counterOut);
+
+      int field3Start = data.indexOf("\"field3\":\"") + 9;
+      int field3End = data.indexOf("\"", field3Start);
+      String field3Value = data.substring(field3Start, field3End);
+      finalCount = field3Value.toInt();  // Set finalCount to the current value in ThingSpeak
+      Serial.print("Current finalCount value: ");
+      Serial.println(finalCount);
+
+      int field4Start = data.indexOf("\"field4\":\"") + 9;
+      int field4End = data.indexOf("\"", field4Start);
+      String field4Value = data.substring(field4Start, field4End);
+      currentInRoom = field4Value.toInt();  // Set currentInRoom to the current value in ThingSpeak
+      Serial.print("Current currentInRoom value: ");
+      Serial.println(currentInRoom);
+    } else {
+      Serial.println("No feeds data found in the response.");
     }
   } else {
     Serial.println("Failed to connect to ThingSpeak.");
@@ -121,13 +134,16 @@ void loop() {
   // Calculate the current number of people in the room
   currentInRoom = counterIn - counterOut;
 
+  // Update finalCount if necessary
+  finalCount = counterIn;  // Set finalCount to the value of counterIn, or use another logic
+
   // Send the updated data to ThingSpeak via HTTP only if the counters have changed
   if (currentMillis - lastUpdate >= 21000) {
     lastUpdate = currentMillis;
 
     ThingSpeak.setField(1, counterIn);
     ThingSpeak.setField(2, counterOut);
-    ThingSpeak.setField(3, finalCount);
+    ThingSpeak.setField(3, finalCount);  // Ensure finalCount is sent with the update
     ThingSpeak.setField(4, currentInRoom);
 
     int result = ThingSpeak.writeFields(channelID, writeAPIKey);
