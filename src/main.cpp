@@ -8,11 +8,12 @@ const int sensor2Pin = 23;  // Sensor 2 for "OUT"
 
 // Wi-Fi credentials
 const char* ssid = "E308";           // Replace with your Wi-Fi SSID
-const char* password = "98806829";  // Replace with your Wi-Fi password
+const char* password = "98806829";   // Replace with your Wi-Fi password
 
 // ThingSpeak settings
 unsigned long channelID = 2771658;          // Channel ID
 const char* writeAPIKey = "762I0WX8SZUMHMI4";  // Write API Key
+const char* readAPIKey = "W9RF5JQJ6UKWZXVN";  // Read API Key
 WiFiClient client;
 
 // Variables
@@ -23,9 +24,6 @@ int finalCount = 0;            // Final visits today
 int currentInRoom = 0;         // Current number in room
 unsigned long sensor1Cooldown = 0;
 unsigned long sensor2Cooldown = 0;
-
-// Flag to track whether finalCount has already been updated
-bool finalCountUpdated = false;
 
 void setup() {
   pinMode(sensor1Pin, INPUT);
@@ -41,6 +39,56 @@ void setup() {
   Serial.println("Connected to WiFi");
 
   ThingSpeak.begin(client);
+
+  // Fetch current values from ThingSpeak via HTTP
+  String url = "http://api.thingspeak.com/channels/" + String(channelID) + "/feeds.json?api_key=" + String(readAPIKey) + "&results=1";
+  
+  if (client.connect("api.thingspeak.com", 80)) {  // Use port 80 for HTTP
+    client.println("GET " + url + " HTTP/1.1");
+    client.println("Host: api.thingspeak.com");
+    client.println("Connection: close");
+    client.println();
+    
+    while (client.connected()) {
+      String line = client.readStringUntil('\n');
+      if (line.indexOf("feeds") >= 0) {
+        int startIdx = line.indexOf("[{") + 2;
+        int endIdx = line.indexOf("}]");
+        String data = line.substring(startIdx, endIdx);
+        
+        // Extract values from the JSON response
+        int field1Start = data.indexOf("\"field1\":\"") + 9;
+        int field1End = data.indexOf("\"", field1Start);
+        String field1Value = data.substring(field1Start, field1End);
+        counterIn = field1Value.toInt();  // Set counterIn to the current value in ThingSpeak
+        Serial.print("Current counterIn value: ");
+        Serial.println(counterIn);
+
+        int field2Start = data.indexOf("\"field2\":\"") + 9;
+        int field2End = data.indexOf("\"", field2Start);
+        String field2Value = data.substring(field2Start, field2End);
+        counterOut = field2Value.toInt();  // Set counterOut to the current value in ThingSpeak
+        Serial.print("Current counterOut value: ");
+        Serial.println(counterOut);
+
+        int field3Start = data.indexOf("\"field3\":\"") + 9;
+        int field3End = data.indexOf("\"", field3Start);
+        String field3Value = data.substring(field3Start, field3End);
+        finalCount = field3Value.toInt();  // Set finalCount to the current value in ThingSpeak
+        Serial.print("Current finalCount value: ");
+        Serial.println(finalCount);
+
+        int field4Start = data.indexOf("\"field4\":\"") + 9;
+        int field4End = data.indexOf("\"", field4Start);
+        String field4Value = data.substring(field4Start, field4End);
+        currentInRoom = field4Value.toInt();  // Set currentInRoom to the current value in ThingSpeak
+        Serial.print("Current currentInRoom value: ");
+        Serial.println(currentInRoom);
+      }
+    }
+  } else {
+    Serial.println("Failed to connect to ThingSpeak.");
+  }
 }
 
 void loop() {
@@ -73,14 +121,7 @@ void loop() {
   // Calculate the current number of people in the room
   currentInRoom = counterIn - counterOut;
 
-  // Update finalCount only when counterIn equals counterOut
-  if (counterIn == counterOut && !finalCountUpdated) {
-    finalCount = counterIn; // Update finalCount only once when counters match
-    finalCountUpdated = true; // Prevent further updates until new mismatch occurs
-  } else if (counterIn != counterOut) {
-    finalCountUpdated = false; // Reset flag when counters are mismatched
-  }
-
+  // Send the updated data to ThingSpeak via HTTP only if the counters have changed
   if (currentMillis - lastUpdate >= 21000) {
     lastUpdate = currentMillis;
 
