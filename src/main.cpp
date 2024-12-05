@@ -93,7 +93,8 @@ void setup() {
       int field4Start = data.indexOf("\"field4\":\"") + 9;
       int field4End = data.indexOf("\"", field4Start);
       String field4Value = data.substring(field4Start, field4End);
-      currentInRoom = field4Value.toInt();  // Set currentInRoom to the current value in ThingSpeak
+      String field4ValueStr = data.substring(field4Start, field4End);
+      currentInRoom = field4ValueStr.toInt();  // Set currentInRoom to the current value in ThingSpeak
       Serial.print("Current currentInRoom value: ");
       Serial.println(currentInRoom);
     } else {
@@ -138,7 +139,7 @@ void loop() {
   finalCount = counterIn;  // Set finalCount to the value of counterIn, or use another logic
 
   // Send the updated data to ThingSpeak via HTTP only if the counters have changed
-  if (currentMillis - lastUpdate >= 15000) {  // 15 seconds
+  if (currentMillis - lastUpdate >= 18000) {  // 18 seconds
     lastUpdate = currentMillis;
 
     ThingSpeak.setField(1, counterIn);
