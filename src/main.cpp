@@ -138,7 +138,7 @@ void loop() {
   finalCount = counterIn;  // Set finalCount to the value of counterIn, or use another logic
 
   // Send the updated data to ThingSpeak via HTTP only if the counters have changed
-  if (currentMillis - lastUpdate >= 21000) {
+  if (currentMillis - lastUpdate >= 15000) {  // 15 seconds
     lastUpdate = currentMillis;
 
     ThingSpeak.setField(1, counterIn);
@@ -154,5 +154,5 @@ void loop() {
     }
   }
 
-  delay(100);
+  delay(100);  // Keep this delay for polling sensors
 }
